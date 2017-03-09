@@ -1,6 +1,7 @@
 require 'synapse/config_generator/base'
 
 require 'fileutils'
+require 'logger'
 
 class Synapse::ConfigGenerator
   class Nginx < BaseGenerator

@@ -1,5 +1,6 @@
 require 'spec_helper'
 require 'synapse/config_generator/nginx'
+require 'synapse/service_watcher'
 
 class MockWatcher; end;
 

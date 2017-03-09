@@ -4,23 +4,8 @@
 # loaded once.
 #
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
-require "#{File.dirname(__FILE__)}/../lib/synapse"
-require 'pry'
+require "#{File.dirname(__FILE__)}/../lib/synapse-nginx"
 require 'support/configuration'
-require 'webmock/rspec'
-
-# configure timecop
-require 'timecop'
-Timecop.safe_mode = true
-
-# configure factory girl
-require 'factory_girl'
-RSpec.configure do |config|
-  config.include FactoryGirl::Syntax::Methods
-  config.before(:suite) do
-    FactoryGirl.find_definitions
-  end
-end
 
 # general RSpec config
 RSpec.configure do |config|
