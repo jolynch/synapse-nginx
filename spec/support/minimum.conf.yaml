@@ -1,0 +1,26 @@
+# list the services to connect
+services:
+  test:
+    default_servers:
+      - { name: default1, host: localhost, port: 8080}
+    discovery:
+      method: zookeeper
+      path: /airbnb/service/logging/event_collector
+      hosts:
+        - localhost:2181
+    nginx:
+      port: 3219
+      bind_address: 'localhost'
+
+# settings for nginx
+nginx:
+  contexts:
+    main: [
+      'worker_processes 1',
+      'pid /tmp/nginx.pid'
+    ]
+    events: [
+      'worker_connections 1024'
+    ]
+  do_writes: false
+  do_reloads: false
