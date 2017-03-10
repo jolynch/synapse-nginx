@@ -33,15 +33,7 @@ describe Synapse::ConfigGenerator::Nginx do
 
   describe 'validates arguments' do
     it 'succeeds on minimal config' do
-      conf = {
-        'contexts' => {'main' => [], 'events' => []},
-        'check_command' => 'noop',
-        'reload_command' => 'noop',
-        'start_command' => 'noop',
-        'config_file_path' => 'somewhre'
-      }
-      Synapse::ConfigGenerator::Nginx.new(conf)
-      expect{Synapse::ConfigGenerator::Nginx.new(conf)}.not_to raise_error
+      expect{Synapse::ConfigGenerator::Nginx.new(config['nginx'])}.not_to raise_error
     end
 
     it 'validates req_pairs' do
