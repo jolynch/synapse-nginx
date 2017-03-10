@@ -90,6 +90,9 @@ class Synapse::ConfigGenerator
       watchers.each do |watcher|
         watcher_config = watcher.config_for_generator[name]
         next if watcher_config['disabled']
+        # There seems to be no way to have empty TCP listeners ... just
+        # don't bind the port at all? ... idk
+        next if watcher_config['mode'] == 'tcp' && watcher.backends.empty?
 
         section = case watcher_config['mode']
           when 'http'
@@ -160,21 +163,26 @@ class Synapse::ConfigGenerator
         "\tserver {",
         "\t\tlisten #{listen_address}:#{port};",
         watcher_config['server'].map {|c| "\t\t#{c};"},
-        generate_proxy(watcher_config['mode'], upstream_name),
+        generate_proxy(watcher_config['mode'], upstream_name, watcher.backends.empty?),
         "\t}",
       ]
     end
 
     # Nginx has some annoying differences between how upstreams in the
     # http (http) module and the stream (tcp) module address upstreams
-    def generate_proxy(mode, upstream_name)
+    def generate_proxy(mode, upstream_name, empty_upstream)
       upstream_name = "http://#{upstream_name}" if mode == 'http'
 
       case mode
       when 'http'
+        if empty_upstream
+          value = "\t\t\treturn 503;"
+        else
+          value = "\t\t\tproxy_pass #{upstream_name};"
+        end
         stanza = [
           "\t\tlocation / {",
-          "\t\t\tproxy_pass #{upstream_name};",
+          value,
           "\t\t}"
         ]
       when 'tcp'
