@@ -157,11 +157,18 @@ class Synapse::ConfigGenerator
         opts['listen_address'] ||
         'localhost'
       )
-      upstream_name = watcher_config.fetch('upstream_name', watcher.name)
 
+      listen_line= [
+        "\t\tlisten",
+        "#{listen_address}:#{port};",
+        watcher_config['listen_options']
+      ].compact.join(' ')
+
+
+      upstream_name = watcher_config.fetch('upstream_name', watcher.name)
       stanza = [
         "\tserver {",
-        "\t\tlisten #{listen_address}:#{port};",
+        listen_line,
         watcher_config['server'].map {|c| "\t\t#{c};"},
         generate_proxy(watcher_config['mode'], upstream_name, watcher.backends.empty?),
         "\t}",
