@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/jolynch/synapse-nginx.png?branch=master)](https://travis-ci.org/jolynch/synapse-nginx)
+
 # synapse-nginx
 A config_generator for the Synapse framework that supports NGINX.
 
