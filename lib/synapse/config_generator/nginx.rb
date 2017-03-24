@@ -160,8 +160,9 @@ class Synapse::ConfigGenerator
 
       listen_line= [
         "\t\tlisten",
-        "#{listen_address}:#{port};",
-        watcher_config['listen_options']
+        "#{listen_address}:#{port}",
+        watcher_config['listen_options'],
+        ';',
       ].compact.join(' ')
 
 
