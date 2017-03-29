@@ -86,7 +86,9 @@ class Synapse::ConfigGenerator
     def generate_config(watchers)
       new_config = generate_base_config
 
-      http, stream = [], []
+      http = (@contexts['http'] || []).collect {|option| "\t#{option};"}
+      stream = (@contexts['stream'] || []).collect {|option| "\t#{option};"}
+
       watchers.each do |watcher|
         watcher_config = watcher.config_for_generator[name]
         next if watcher_config['disabled']
