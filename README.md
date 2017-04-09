@@ -85,7 +85,12 @@ Setting `listen_address` on a per service basis overrides the global `listen_add
 in the top level `nginx` config hash.
 * `listen_options`: additional listen options provided as a string,
 such as `reuseport`, to append to the listen line. (default is empty string)
-* `upstream_order`: how servers should be ordered in the `upstream` stanza. Setting to `asc` means sorting backends in ascending alphabetical order before generating stanza. `desc` means descending alphabetical order. `no_shuffle` means no shuffling or sorting. (default: `shuffle`, which results in random ordering of upstream servers)
+* `upstream_order`: how servers should be ordered in the `upstream` stanza.
+This defaults to `asc` to prevent reloads, and can be set to:
+  * `asc` sort upstreams in ascending alphabetical order.
+  * `desc` sort upstreams in descending alphabetical order.
+  * `shuffle` means random ordering of servers.
+  * `no_shuffle` means no shuffling or sorting.
 * `upstream_name`: The name of the generated nginx backend for this service
   (defaults to the service's key in the `services` section)
 

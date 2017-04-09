@@ -38,15 +38,18 @@ class Synapse::ConfigGenerator
       # how to restart nginx
       @restart_interval = @opts.fetch('restart_interval', 2).to_i
       @restart_jitter = @opts.fetch('restart_jitter', 0).to_f
-      @restart_required = true
+      @restart_required = false
       @has_started = false
 
       # virtual clock bookkeeping for controlling how often nginx restarts
       @time = 0
       @next_restart = @time
 
-      # a place to store the parsed nginx config from each watcher
-      @watcher_configs = {}
+      # a place to store generated server + upstream stanzas, and watcher
+      # revisions so we can save CPU on updates by not re-computing stanzas
+      @servers_cache = {}
+      @upstreams_cache = {}
+      @watcher_revisions = {}
     end
 
     def normalize_watcher_provided_config(service_watcher_name, service_watcher_config)
@@ -57,9 +60,11 @@ class Synapse::ConfigGenerator
         'server' => [],
         'disabled' => false,
       }
-      unless service_watcher_config.include?('port')
+
+      unless service_watcher_config.include?('port') || service_watcher_config['disabled']
         log.warn "synapse: service #{service_watcher_name}: nginx config does not include a port; only upstream sections for the service will be created; you must move traffic there manually using server sections"
       end
+
       defaults.merge(service_watcher_config)
     end
 
@@ -96,6 +101,19 @@ class Synapse::ConfigGenerator
         # don't bind the port at all? ... idk
         next if watcher_config['mode'] == 'tcp' && watcher.backends.empty?
 
+
+        # Only regenerate if something actually changed. This saves a lot
+        # of CPU load for high churn systems
+        regenerate = watcher.revision != @watcher_revisions[watcher.name] ||
+                     @servers_cache[watcher.name].nil? ||
+                     @upstreams_cache[watcher.name].nil?
+
+        if regenerate
+          @servers_cache[watcher.name] = generate_server(watcher).flatten
+          @upstreams_cache[watcher.name] = generate_upstream(watcher).flatten
+          @watcher_revisions[watcher.name] = watcher.revision
+        end
+
         section = case watcher_config['mode']
           when 'http'
             http
@@ -104,8 +122,8 @@ class Synapse::ConfigGenerator
           else
             raise ArgumentError, "synapse does not understand #{watcher_config['mode']} as a service mode"
         end
-        section << generate_server(watcher).flatten
-        section << generate_upstream(watcher).flatten
+        section << @servers_cache[watcher.name]
+        section << @upstreams_cache[watcher.name]
       end
 
       unless http.empty?
@@ -214,15 +232,18 @@ class Synapse::ConfigGenerator
       # nginx doesn't like upstreams with no backends?
       return [] if backends.empty?
 
+      # Note that because we use the config file as the source of truth
+      # for whether or not to reload, we want some kind of sorted order
+      # by default, in this case we choose asc
       keys = case watcher_config['upstream_order']
-      when 'asc'
-        backends.keys.sort
       when 'desc'
         backends.keys.sort.reverse
+      when 'shuffle'
+        backends.keys.shuffle
       when 'no_shuffle'
         backends.keys
       else
-        backends.keys.shuffle
+        backends.keys.sort
       end
 
       stanza = [
@@ -247,7 +268,13 @@ class Synapse::ConfigGenerator
         old_config = ""
       end
 
-      if old_config == new_config
+      # The first line of the config files contain a timestamp, so to prevent
+      # un-needed restarts, only compare after that. We do not split on
+      # newlines and compare because this is called a lot, and we need to be
+      # as CPU efficient as possible.
+      old_version =  old_config[(old_config.index("\n") || 0) + 1..-1]
+      new_version =  new_config[(new_config.index("\n") || 0) + 1..-1]
+      if old_version == new_version
         return false
       else
         File.open(opts['config_file_path'],'w') {|f| f.write(new_config)}
