@@ -16,6 +16,7 @@ describe Synapse::ConfigGenerator::Nginx do
     allow(mockWatcher).to receive(:config_for_generator).and_return({
       'nginx' => watcher_config
     })
+    allow(mockWatcher).to receive(:revision).and_return(1)
     mockWatcher
   end
 
@@ -28,6 +29,7 @@ describe Synapse::ConfigGenerator::Nginx do
     allow(mockWatcher).to receive(:config_for_generator).and_return({
       'nginx' => watcher_config
     })
+    allow(mockWatcher).to receive(:revision).and_return(1)
     mockWatcher
   end
 
