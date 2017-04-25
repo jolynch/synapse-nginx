@@ -71,6 +71,11 @@ class Synapse::ConfigGenerator
     def tick(watchers)
       @time += 1
 
+      # Always ensure we try to start at least once
+      # Note that this should only trigger during error cases where for
+      # some reason Synapse could not start NGINX during the initial restart
+      start if opts['do_reloads'] && !@has_started
+
       # We potentially have to restart if the restart was rate limited
       # in the original call to update_config
       restart if opts['do_reloads'] && @restart_required
@@ -289,6 +294,19 @@ class Synapse::ConfigGenerator
       end
     end
 
+    def start
+      log.info "synapse: attempting to run #{opts['start_command']} to get nginx started"
+      log.info 'synapse: this can fail if nginx is already running'
+      begin
+        `#{opts['start_command']}`.chomp
+      rescue Exception => e
+        log.warn "synapse: error in NGINX start: #{e.inspect}"
+        log.warn e.backtrace
+      ensure
+        @has_started = true
+      end
+    end
+
     # restarts nginx if the time is right
     def restart
       if @time < @next_restart
@@ -299,13 +317,8 @@ class Synapse::ConfigGenerator
       @next_restart = @time + @restart_interval
       @next_restart += rand(@restart_jitter * @restart_interval + 1)
 
-      # do the actual restart
-      unless @has_started
-        log.info "synapse: attempting to run #{opts['start_command']} to get nginx started"
-        log.info 'synapse: this can fail if nginx is already running'
-        res = `#{opts['start_command']}`.chomp
-        @has_started = true
-      end
+      # On the very first restart we may need to start
+      start unless @has_started
 
       res = `#{opts['reload_command']}`.chomp
       unless $?.success?

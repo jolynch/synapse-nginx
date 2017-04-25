@@ -94,4 +94,69 @@ describe Synapse::ConfigGenerator::Nginx do
       subject.update_config(watchers)
     end
   end
+
+  describe '#update_config' do
+    let(:watchers) { [mockwatcher] }
+
+    shared_context 'generate_config is stubbed out' do
+      let(:new_config) { 'this is a new config!' }
+      before { allow(subject).to receive(:generate_config).and_return(new_config) }
+    end
+
+    it 'always updates the config' do
+      expect(subject).to receive(:generate_config).with(watchers)
+      subject.update_config(watchers)
+    end
+
+    context 'if we support config writes' do
+      include_context 'generate_config is stubbed out'
+      before { config['nginx']['do_writes'] = true }
+
+      it 'writes the new config' do
+        expect(subject).to receive(:write_config).with(new_config)
+        subject.update_config(watchers)
+      end
+    end
+
+    context 'when we support config writes and reloads' do
+      include_context 'generate_config is stubbed out'
+
+      before do
+        config['nginx']['do_writes'] = true
+        config['nginx']['do_reloads'] = true
+        allow(subject).to receive(:write_config).and_return(true)
+        allow(subject).to receive(:`).and_return('it worked')
+      end
+
+      it 'always does a restarts and only starts once' do
+        expect(subject).to receive(:write_config).with(new_config).twice
+        expect(subject).to receive(:restart).twice.and_call_original
+        expect(subject).to receive(:start).once.and_call_original
+        subject.update_config(watchers)
+        subject.update_config(watchers)
+      end
+    end
+  end
+
+  describe '#tick' do
+    let(:watchers) { [mockwatcher] }
+
+    context 'when we support reloads' do
+      before do
+        config['nginx']['do_reloads'] = true
+        config['nginx']['start_command'] = 'foo'
+        config['nginx']['reload_command'] = 'bar'
+        allow(subject).to receive(:start)
+        allow(subject).to receive(:restart)
+        allow(subject).to receive(:`).and_return('it worked')
+      end
+
+      it 'does start once' do
+        expect(subject).to receive(:start).once.and_call_original
+        expect(subject).not_to receive(:restart)
+        subject.tick(watchers)
+        subject.tick(watchers)
+      end
+    end
+  end
 end
