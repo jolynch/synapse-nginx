@@ -54,7 +54,8 @@ Required if `do_writes` is set.
 You can control reloading with:
 * `do_reloads`: whether or not Synapse will reload nginx automatically (default to `true`)
 * `reload_command`: the command Synapse will run to reload NGINX. Required if `do_reloads` is set.
-* `start_command`: the command Synapse will run to start NGINX the first time. Required if `do_reloads` is set.
+* `start_command`: the command Synapse will run to start NGINX the first time. Required if `do_reloads` is set. You probably want this to check
+  if the existing NGINX is running (e.g. by sending the 0 signal to the master pid).
 * `restart_interval`: number of seconds to wait between restarts of NGINX (default: 2)
 * `restart_jitter`: percentage, expressed as a float, of jitter to multiply the `restart_interval` by when determining the next
   restart time. Use this to help prevent storms when HAProxy restarts. (default: 0.0)
